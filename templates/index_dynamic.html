@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MatPlotAgent Benchmark Demo</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <style>
+        /* 保持原有的样式 */
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        #benchmarkInput { width: 100px; padding: 10px; margin-bottom: 10px; }
+        button { padding: 10px 20px; background-color: #007bff; color: white; border: none; cursor: pointer; }
+        #result, #plot { margin-top: 20px; }
+        #plot img { max-width: 100%; height: auto; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>MatPlotAgent Benchmark Demo</h1>
+    <input type="number" id="benchmarkInput" min="1" max="100" placeholder="Enter ID (1-100)">
+    <button onclick="runBenchmark()">Run Benchmark</button>
+    <div id="result">
+        <h2>Instruction:</h2>
+        <pre id="instruction"></pre>
+        <h2>Expanded Instruction:</h2>
+        <pre id="expanded_instruction"></pre>
+        <h2>Generated Code:</h2>
+        <pre id="code"></pre>
+        <h2>Visual Feedback:</h2>
+        <pre id="visualFeedback"></pre>
+    </div>
+    <div id="plot">
+        <h2>Original Plot:</h2>
+        <pre id="original_plot"></pre>
+        <h2>Modified Plot:</h2>
+        <pre id="modified_plot"></pre>
+    </div>
+
+    <script>
+        const socket = io();
+
+        function runBenchmark() {
+            const benchmarkId = document.getElementById('benchmarkInput').value;
+            socket.emit('run_benchmark', { id: benchmarkId });
+
+            // 清空之前的结果
+            document.getElementById('instruction').textContent = '';
+            document.getElementById('expanded_instruction').textContent = '';
+            document.getElementById('code').textContent = '';
+            document.getElementById('visualFeedback').textContent = '';
+            document.getElementById('original_plot').innerHTML = '';
+            document.getElementById('modified_plot').innerHTML = '';
+        }
+
+        socket.on('instruction_update', function(data) {
+            document.getElementById('instruction').textContent = data.instruction;
+        });
+
+        socket.on('expanded_instruction_update', function(data) {
+            document.getElementById('expanded_instruction').textContent = data.expanded_instruction;
+        });
+
+        socket.on('code_update', function(data) {
+            document.getElementById('code').textContent = data.code;
+        });
+
+        socket.on('visual_feedback_update', function(data) {
+            document.getElementById('visualFeedback').textContent = data.visual_feedback;
+        });
+
+        socket.on('original_plot_update', function(data) {
+            displayOriginalPlot(data.plot);
+        });
+
+        socket.on('modified_plot_update', function(data) {
+            displayModifiedPlot(data.plot);
+        });
+
+        function displayOriginalPlot(plotData) {
+            const plotDiv = document.getElementById('original_plot');
+            plotDiv.innerHTML = `<img src="data:image/png;base64,${plotData}" alt="Generated Plot">`;
+        }
+
+        function displayModifiedPlot(plotData) {
+            const plotDiv = document.getElementById('modified_plot');
+            plotDiv.innerHTML = `<img src="data:image/png;base64,${plotData}" alt="Generated Plot">`;
+        }
+
+        socket.on('benchmark_complete', function(data) {
+            if (data.status === 'success') {
+                console.log('Benchmark completed successfully');
+            } else {
+                console.error('Benchmark failed:', data.error);
+            }
+        });
+
+        socket.on('error', function(data) {
+            document.getElementById('result').innerHTML = `<p>Error: ${data.error}</p>`;
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MatPlotAgent Benchmark Demo</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        #benchmarkInput { width: 100px; padding: 10px; margin-bottom: 10px; }
+        button { padding: 10px 20px; background-color: #007bff; color: white; border: none; cursor: pointer; }
+        #result, #plot { margin-top: 20px; }
+        #plot img { max-width: 100%; height: auto; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>MatPlotAgent Benchmark Demo</h1>
+    <input type="number" id="benchmarkInput" min="1" max="100" placeholder="Enter ID (1-100)">
+    <button onclick="runBenchmark()">Run Benchmark</button>
+    <div id="result">
+        <h2>Instruction:</h2>
+        <pre id="instruction"></pre>
+        <h2>Generated Code:</h2>
+        <pre id="code"></pre>
+        <h2>Visual Feedback:</h2>
+        <pre id="visualFeedback"></pre>
+    </div>
+    <div id="plot"></div>
+
+    <script>
+        function runBenchmark() {
+            const benchmarkId = document.getElementById('benchmarkInput').value;
+            fetch('/api/process_benchmark', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: benchmarkId }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    document.getElementById('instruction').textContent = data.instruction;
+                    document.getElementById('code').textContent = data.code;
+                    document.getElementById('visualFeedback').textContent = data.visual_feedback;
+                    displayPlot(data.plot);
+                } else {
+                    document.getElementById('result').innerHTML = `<p>Error: ${data.error}</p>`;
+                }
+            })
+            .catch(error => {
+                document.getElementById('result').innerHTML = `<p>Error: ${error.message}</p>`;
+            });
+        }
+
+        function displayPlot(plotData) {
+            const plotDiv = document.getElementById('plot');
+            plotDiv.innerHTML = `<img src="data:image/png;base64,${plotData}" alt="Generated Plot">`;
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+Traceback (most recent call last):
+  File "D:\ComputerScience\CODES\MatPlotAgent-main\workspace\example_86\code_action_gpt-4o_initial_1.py", line 38, in <module>
+    wedges, texts = ax.pie(values, radius=1 - i*size, colors=color_list, startangle=90, counterclock=False,
+  File "D:\miniconda3\lib\site-packages\matplotlib\__init__.py", line 1465, in inner
+    return func(ax, *map(sanitize_sequence, args), **kwargs)
+  File "D:\miniconda3\lib\site-packages\matplotlib\axes\_axes.py", line 3252, in pie
+    raise ValueError(f'radius must be a positive number, not {radius}')
+ValueError: radius must be a positive number, not -0.19999999999999996

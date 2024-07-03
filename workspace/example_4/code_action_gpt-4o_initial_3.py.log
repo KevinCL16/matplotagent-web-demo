@@ -1,0 +1,6 @@
+D:\ComputerScience\CODES\MatPlotAgent-main\workspace\example_4\code_action_gpt-4o_initial_3.py:13: RuntimeWarning: covariance is not symmetric positive-semidefinite.
+  data = np.random.multivariate_normal(mean, cov, 700)
+D:\ComputerScience\CODES\MatPlotAgent-main\workspace\example_4\code_action_gpt-4o_initial_3.py:27: RuntimeWarning: invalid value encountered in sqrt
+  ell_radius_y = np.sqrt(1 - pearson)
+D:\ComputerScience\CODES\MatPlotAgent-main\workspace\example_4\code_action_gpt-4o_initial_3.py:52: UserWarning: FigureCanvasAgg is non-interactive, and thus cannot be shown
+  plt.show()
