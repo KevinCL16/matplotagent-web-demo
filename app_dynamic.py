@@ -23,7 +23,7 @@ with open('benchmark_data/benchmark_instructions.json', 'r') as f:
 
 @app.route('/')
 def index():
-    return render_template('index_dynamic.html')  # 确保使用支持实时更新的新HTML文件
+    return render_template('index_dynamic.html')
 
 
 @socketio.on('run_benchmark')
@@ -31,7 +31,7 @@ def handle_benchmark(data):
     benchmark_id = data.get('id')
 
     if not benchmark_id or not 1 <= int(benchmark_id) <= 100:
-        emit('error', {'error': 'Invalid benchmark ID. Please provide a number between 1 and 100.'})
+        emit('error', {'error': '无效的 benchmark ID。请提供 1 到 100 之间的数字。'})
         return
 
     try:
@@ -41,7 +41,6 @@ def handle_benchmark(data):
         # 发送指令更新
         emit('instruction_update', {'instruction': instruction['simple_instruction']})
 
-        # Process the instruction using mainworkflow
         workspace = f"D:\ComputerScience\CODES\MatPlotAgent-main\workspace\example_{benchmark_id}"
 
         # 检查工作目录是否存在,如果不存在则创建
@@ -59,32 +58,28 @@ def handle_benchmark(data):
                         shutil.copy2(s, d)
                 print(f"已将 {input_path} 的内容复制到 {workspace}")
 
-        print("执行mainworkflow")
+        print("执行 mainworkflow")
 
-        def update_callback(expanded_instruction=None, code=None, visual_feedback=None, figure=None):
-            emit('expanded_instruction_update', {'expanded_instruction': expanded_instruction})
-            emit('code_update', {'code': code})
-            emit('visual_feedback_update', {'visual_feedback': visual_feedback})
-
-            if figure is not None:
+        def update_callback(expanded_instruction=None, code=None, visual_feedback=None, figure=None, terminal_output=None):
+            if expanded_instruction:
+                emit('expanded_instruction_update', {'expanded_instruction': expanded_instruction, 'append': True})
+            if code:
+                emit('code_update', {'code': code, 'append': True})
+            if visual_feedback:
+                emit('visual_feedback_update', {'visual_feedback': visual_feedback, 'append': True})
+            if figure:
                 with open(figure, 'rb') as img_file:
                     plot_data = base64.b64encode(img_file.read()).decode()
-                if figure.endswith('novice.png'):
-                    emit('original_plot_update', {'plot': plot_data})
-
-                elif figure.endswith('novice_final.png'):
-                    emit('modified_plot_update', {'plot': plot_data})
-
-                else:
-                    pass
+                plot_type = 'original' if figure.endswith('novice.png') else 'modified'
+                socketio.emit('plot_update', {'type': plot_type, 'data': plot_data})
+            if terminal_output:
+                emit('terminal_output_update', {'terminal_output': terminal_output, 'append': True})
 
         result = mainworkflow(instruction['expert_instruction'], instruction['simple_instruction'], workspace, update_callback)
-
         emit('benchmark_complete', {'status': 'success'})
 
     except Exception as e:
         emit('error', {'error': str(e)})
-
 
 if __name__ == '__main__':
     socketio.run(app, debug=True, allow_unsafe_werkzeug=True)

@@ -1,7 +1,7 @@
 import argparse
 import json
-import pdb
-
+import sys
+import io
 from tqdm import tqdm
 from agents.query_expansion_agent import QueryExpansionAgent
 from agents.plot_agent import PlotAgent
@@ -10,6 +10,7 @@ import logging
 import os
 import matplotlib.pyplot as plt
 from agents.utils import is_run_code_success, run_code, get_code
+
 parser = argparse.ArgumentParser()
 parser.add_argument('--workspace', type=str, default='./workspace')
 parser.add_argument('--model_type', type=str, default='gpt-4o')
@@ -17,58 +18,74 @@ parser.add_argument('--visual_refine', type=bool, default=True)
 args = parser.parse_args()
 
 def mainworkflow(expert_instruction, simple_instruction, workspace, update_callback=None, max_try=3):
-    # Query expanding
-    print('=========Query Expansion AGENT=========')
-    config = {'workspace': workspace}
+    output_buffer = io.StringIO()
+    original_stdout = sys.stdout
+    sys.stdout = output_buffer
 
-    print(f"config: {config}")
-    print(f"simple instruction:\n {simple_instruction}\n")
-    print(args.model_type)
+    def flush_output():
+        output = output_buffer.getvalue()
+        if output and update_callback:
+            update_callback(terminal_output=output)
+        output_buffer.truncate(0)
+        output_buffer.seek(0)
 
-    query_expansion_agent = QueryExpansionAgent(expert_instruction, simple_instruction, model_type=args.model_type)
-    expanded_simple_instruction = query_expansion_agent.run('simple')
-    print('=========Expanded Simple Instruction=========')
-    print(expanded_simple_instruction)
+    try:
+        print('=========Query Expansion AGENT=========')
+        config = {'workspace': workspace}
+        print(f"config: {config}")
+        print(f"simple instruction:\n {simple_instruction}\n")
+        print(args.model_type)
+        flush_output()
 
-    # pdb.set_trace()
+        query_expansion_agent = QueryExpansionAgent(expert_instruction, simple_instruction, model_type=args.model_type)
+        expanded_simple_instruction = query_expansion_agent.run('simple')
+        print('=========Expanded Simple Instruction=========')
+        # print(expanded_simple_instruction)
+        flush_output()
 
-    if update_callback:
-        update_callback(expanded_instruction=expanded_simple_instruction)
-
-    print('=========Plotting=========')
-
-    # GPT-4 Plot Agent
-    # Initial plotting
-    action_agent = PlotAgent(config, expanded_simple_instruction)
-    print('=========Novice 4 Plotting=========')
-    novice_log, novice_code = action_agent.run_initial(args.model_type, 'novice.png')
-    logging.info(novice_log)
-    print('=========Original Code=========')
-    print(novice_code)
-
-    visual_feedback = ""
-    if args.visual_refine and os.path.exists(f'{workspace}/novice.png'):
         if update_callback:
-            update_callback(expanded_instruction=expanded_simple_instruction, code=novice_code,
-                            figure=os.path.join(workspace, 'novice.png'))
-        print('Use original code for visual feedback')
-        visual_refine_agent = VisualRefineAgent('novice.png', config, '', simple_instruction)
-        visual_feedback = visual_refine_agent.run('gpt-4', 'novice', 'novice_final.png')
-        print('=========Visual Feedback=========')
-        print(visual_feedback)
-        final_instruction = '' + '\n\n' + visual_feedback
-        action_agent = PlotAgent(config, final_instruction)
-        novice_log, novice_code = action_agent.run_vis(args.model_type, 'novice_final.png')
+            update_callback(expanded_instruction=expanded_simple_instruction)
+
+        print('=========Plotting=========')
+        action_agent = PlotAgent(config, expanded_simple_instruction)
+        print('=========Novice 4 Plotting=========')
+        flush_output()
+        novice_log, novice_code = action_agent.run_initial(args.model_type, 'novice.png')
         logging.info(novice_log)
+        print('=========Original Code=========')
+        # print(novice_code)
+        flush_output()
 
         if update_callback:
-            update_callback(expanded_instruction=expanded_simple_instruction, code=novice_code, visual_feedback=visual_feedback, figure=os.path.join(workspace, 'novice_final.png' if args.visual_refine else 'novice.png'))
+            update_callback(code=novice_code)
 
-    result = {
-        'code': novice_code,
-        'visual_feedback': visual_feedback if args.visual_refine and os.path.exists(f'{workspace}/novice.png') else '',
-        'figure_path': os.path.join(workspace, 'novice_final.png' if args.visual_refine else 'novice.png')
-    }
+        visual_feedback = ""
+        if args.visual_refine and os.path.exists(f'{workspace}/novice.png'):
+            if update_callback:
+                update_callback(figure=os.path.join(workspace, 'novice.png'))
+            print('Use original code for visual feedback')
+            flush_output()
+            visual_refine_agent = VisualRefineAgent('novice.png', config, '', simple_instruction)
+            visual_feedback = visual_refine_agent.run('gpt-4', 'novice', 'novice_final.png')
+            print('=========Visual Feedback=========')
+            # print(visual_feedback)
+            flush_output()
+            final_instruction = '' + '\n\n' + visual_feedback
+            action_agent = PlotAgent(config, final_instruction)
+            novice_log, novice_code = action_agent.run_vis(args.model_type, 'novice_final.png')
+            logging.info(novice_log)
+
+            if update_callback:
+                update_callback(code=novice_code, visual_feedback=visual_feedback, figure=os.path.join(workspace, 'novice_final.png'))
+
+        result = {
+            'code': novice_code,
+            'visual_feedback': visual_feedback if args.visual_refine and os.path.exists(f'{workspace}/novice.png') else '',
+            'figure_path': os.path.join(workspace, 'novice_final.png' if args.visual_refine else 'novice.png')
+        }
+
+    finally:
+        sys.stdout = original_stdout
 
     return result
 
@@ -86,9 +103,9 @@ if __name__ == "__main__":
 
     workspace_base = args.workspace
     data_path = '/home/zhoupeng/project/LLM/agent/plotagent/benchmark/newPlotAgent/plot-agent/benchmark_data/'
-    # open the json file 
+    # open the json file
     data = json.load(open(f'{data_path}/benchmark_instructions.json'))
-    
+
     for item in tqdm(data):
         novice_instruction = item['simple_instruction']
         expert_instruction = item['expert_instruction']

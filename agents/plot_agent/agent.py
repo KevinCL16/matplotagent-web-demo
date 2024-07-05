@@ -32,12 +32,12 @@ class PlotAgent():
             messages = []
             messages.append({"role": "system", "content": fill_in_placeholders(INITIAL_SYSTEM_PROMPT, information)})
             messages.append({"role": "user", "content": fill_in_placeholders(INITIAL_USER_PROMPT, information)})
-            print(messages)
+            # print(messages)
         else:
             messages = []
             messages.append({"role": "system", "content": fill_in_placeholders(VIS_SYSTEM_PROMPT, information)})
             messages.append({"role": "user", "content": fill_in_placeholders(VIS_USER_PROMPT, information)})
-            print(messages)
+            # print(messages)
 
         self.chat_history = self.chat_history + messages
         return completion_with_backoff(messages, model_type)
@@ -121,7 +121,7 @@ class PlotAgent():
                                                                                            'data_information': self.data_information})})
                 try_count += 1
                 result = completion_with_backoff(self.chat_history, model_type=model_type)
-                print(result)
+                # print(result)
 
         return log, ''
 

@@ -87,18 +87,12 @@ def completion_for_4v(messages, model_type):
     openai.api_key = API_KEY
     openai.base_url = BASE_URL
 
-    print("pre 4v feedback chat completion")
-    print(messages)
-    print(model_type)
-
     response = openai.chat.completions.create(
         model=model_type,
         messages=messages,
         temperature=temperature,
         # max_tokens=2000
     )
-
-    print("post 4v feedback chat completion")
 
     result = response.choices[0].message
     answer = result.content

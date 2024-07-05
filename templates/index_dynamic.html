@@ -17,23 +17,25 @@
 </head>
 <body>
     <h1>MatPlotAgent Benchmark Demo</h1>
-    <input type="number" id="benchmarkInput" min="1" max="100" placeholder="Enter ID (1-100)">
-    <button onclick="runBenchmark()">Run Benchmark</button>
+    <input type="number" id="benchmarkInput" min="1" max="100" placeholder="输入 ID (1-100)">
+    <button onclick="runBenchmark()">运行 Benchmark</button>
     <div id="result">
-        <h2>Instruction:</h2>
+        <h2>指令:</h2>
         <pre id="instruction"></pre>
-        <h2>Expanded Instruction:</h2>
+        <h2>扩展指令:</h2>
         <pre id="expanded_instruction"></pre>
-        <h2>Generated Code:</h2>
+        <h2>生成的代码:</h2>
         <pre id="code"></pre>
-        <h2>Visual Feedback:</h2>
+        <h2>视觉反馈:</h2>
         <pre id="visualFeedback"></pre>
+        <h2>终端输出:</h2>
+        <pre id="terminal_output"></pre>
     </div>
     <div id="plot">
-        <h2>Original Plot:</h2>
-        <pre id="original_plot"></pre>
-        <h2>Modified Plot:</h2>
-        <pre id="modified_plot"></pre>
+        <h2>原始图:</h2>
+        <div id="original_plot"></div>
+        <h2>修改后的图:</h2>
+        <div id="modified_plot"></div>
     </div>
 
     <script>
@@ -48,6 +50,7 @@
             document.getElementById('expanded_instruction').textContent = '';
             document.getElementById('code').textContent = '';
             document.getElementById('visualFeedback').textContent = '';
+            document.getElementById('terminal_output').textContent = '';
             document.getElementById('original_plot').innerHTML = '';
             document.getElementById('modified_plot').innerHTML = '';
         }
@@ -57,45 +60,50 @@
         });
 
         socket.on('expanded_instruction_update', function(data) {
-            document.getElementById('expanded_instruction').textContent = data.expanded_instruction;
+            updateContent('expanded_instruction', data.expanded_instruction, data.append);
         });
 
         socket.on('code_update', function(data) {
-            document.getElementById('code').textContent = data.code;
+            updateContent('code', data.code, data.append);
         });
 
         socket.on('visual_feedback_update', function(data) {
-            document.getElementById('visualFeedback').textContent = data.visual_feedback;
+            updateContent('visualFeedback', data.visual_feedback, data.append);
         });
 
-        socket.on('original_plot_update', function(data) {
-            displayOriginalPlot(data.plot);
+        socket.on('terminal_output_update', function(data) {
+            updateContent('terminal_output', data.terminal_output, data.append);
         });
 
-        socket.on('modified_plot_update', function(data) {
-            displayModifiedPlot(data.plot);
+        socket.on('plot_update', function(data) {
+    displayPlot(data.type === 'original' ? 'original_plot' : 'modified_plot', data.data);
         });
 
-        function displayOriginalPlot(plotData) {
-            const plotDiv = document.getElementById('original_plot');
-            plotDiv.innerHTML = `<img src="data:image/png;base64,${plotData}" alt="Generated Plot">`;
+        function updateContent(elementId, content, append) {
+            const element = document.getElementById(elementId);
+            if (append) {
+                element.textContent += content + '\n';
+            } else {
+                element.textContent = content;
+            }
+            element.scrollTop = element.scrollHeight;
         }
 
-        function displayModifiedPlot(plotData) {
-            const plotDiv = document.getElementById('modified_plot');
-            plotDiv.innerHTML = `<img src="data:image/png;base64,${plotData}" alt="Generated Plot">`;
+        function displayPlot(elementId, plotData) {
+            const plotDiv = document.getElementById(elementId);
+            plotDiv.innerHTML = `<img src="data:image/png;base64,${plotData}" alt="生成的图">`;
         }
 
         socket.on('benchmark_complete', function(data) {
             if (data.status === 'success') {
-                console.log('Benchmark completed successfully');
+                console.log('Benchmark 成功完成');
             } else {
-                console.error('Benchmark failed:', data.error);
+                console.error('Benchmark 失败:', data.error);
             }
         });
 
         socket.on('error', function(data) {
-            document.getElementById('result').innerHTML = `<p>Error: ${data.error}</p>`;
+            document.getElementById('result').innerHTML += `<p>错误: ${data.error}</p>`;
         });
     </script>
 </body>
