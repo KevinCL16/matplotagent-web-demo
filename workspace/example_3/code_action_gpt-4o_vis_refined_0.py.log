@@ -1,6 +1,6 @@
 Traceback (most recent call last):
   File "D:\ComputerScience\CODES\MatPlotAgent-main\workspace\example_3\code_action_gpt-4o_vis_refined_0.py", line 12, in <module>
-    fig, axes = plt.subplots(nrows=1, ncols=2, sharey=True, figsize=(12, 6))
+    fig, (ax1, ax2) = plt.subplots(nrows=1, ncols=2, sharey=True)
   File "D:\miniconda3\lib\site-packages\matplotlib\pyplot.py", line 1598, in subplots
     fig = figure(**fig_kw)
   File "D:\miniconda3\lib\site-packages\matplotlib\pyplot.py", line 934, in figure

@@ -9,29 +9,30 @@ np.random.seed(12345678)
 data = [np.sort(np.random.normal(0, std, 150)) for std in range(2, 7)]
 
 # Create subplots
-fig, axes = plt.subplots(nrows=1, ncols=2, sharey=True, figsize=(12, 6))
+fig, (ax1, ax2) = plt.subplots(nrows=1, ncols=2, sharey=True)
 
-# First subplot: Default violin plot
-sns.violinplot(data=data, ax=axes[0])
-axes[0].set_title('Default Violin Plot')
+# Default violin plot
+sns.violinplot(data=data, ax=ax1)
+ax1.set_title('Default Violin Plot')
 
 # Calculate quartiles and medians
 quartiles = [np.percentile(d, [25, 50, 75]) for d in data]
-whiskers = [np.percentile(d, [5, 95]) for d in data]
+whiskers = [(np.min(d), np.max(d)) for d in data]
 
 # Plot medians, quartiles, and whiskers
 for i, (q, w) in enumerate(zip(quartiles, whiskers)):
-    axes[0].plot(i, q[1], 'ro')  # Median
-    axes[0].vlines(i, q[0], q[2], color='k', linestyle='-')  # Quartiles
-    axes[0].vlines(i, w[0], w[1], color='k', linestyle='--')  # Whiskers
+    ax1.plot(i, q[1], 'ro')  # Median
+    ax1.vlines(i, q[0], q[2], colors='k', linestyles='-')  # Quartiles
+    ax1.vlines(i, w[0], w[1], colors='k', linestyles='--')  # Whiskers
 
-# Second subplot: Customized violin plot
-sns.violinplot(data=data, ax=axes[1], inner=None, color='blue', linewidth=1, alpha=0.5)
-axes[1].set_title('Customized Violin Plot')
+# Customized violin plot
+sns.violinplot(data=data, ax=ax2, inner=None, color='blue', linewidth=1, alpha=0.5)
+ax2.set_title('Customized Violin Plot')
 
 # Set x-axis labels
-for ax in axes:
-    ax.set_xticklabels(['E', 'F', 'G', 'H', 'I'])
+labels = ['E', 'F', 'G', 'H', 'I']
+ax1.set_xticklabels(labels)
+ax2.set_xticklabels(labels)
 
 # Adjust layout
 plt.subplots_adjust(bottom=0.2, wspace=0.3)
