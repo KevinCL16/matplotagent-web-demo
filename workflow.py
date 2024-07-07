@@ -1,5 +1,6 @@
 import argparse
 import json
+import pdb
 import sys
 import io
 from tqdm import tqdm
@@ -17,7 +18,8 @@ parser.add_argument('--model_type', type=str, default='gpt-4o')
 parser.add_argument('--visual_refine', type=bool, default=True)
 args = parser.parse_args()
 
-def mainworkflow(expert_instruction, simple_instruction, workspace, update_callback=None, max_try=3):
+
+def mainworkflow(expert_instruction, simple_instruction, workspace, update_callback=None, max_try=3, model='gpt-4o'):
     output_buffer = io.StringIO()
     original_stdout = sys.stdout
     sys.stdout = output_buffer
@@ -33,14 +35,12 @@ def mainworkflow(expert_instruction, simple_instruction, workspace, update_callb
         print('=========Query Expansion AGENT=========')
         config = {'workspace': workspace}
         print(f"config: {config}")
-        print(f"simple instruction:\n {simple_instruction}\n")
-        print(args.model_type)
+        print(f"Using model: {model}")
         flush_output()
 
-        query_expansion_agent = QueryExpansionAgent(expert_instruction, simple_instruction, model_type=args.model_type)
+        query_expansion_agent = QueryExpansionAgent(expert_instruction, simple_instruction, model_type=model)
         expanded_simple_instruction = query_expansion_agent.run('simple')
         print('=========Expanded Simple Instruction=========')
-        # print(expanded_simple_instruction)
         flush_output()
 
         if update_callback:
@@ -48,12 +48,11 @@ def mainworkflow(expert_instruction, simple_instruction, workspace, update_callb
 
         print('=========Plotting=========')
         action_agent = PlotAgent(config, expanded_simple_instruction)
-        print('=========Novice 4 Plotting=========')
+        print(f'========={model} Plotting=========')
         flush_output()
-        novice_log, novice_code = action_agent.run_initial(args.model_type, 'novice.png')
+        novice_log, novice_code = action_agent.run_initial(model, 'novice.png')
         logging.info(novice_log)
         print('=========Original Code=========')
-        # print(novice_code)
         flush_output()
 
         if update_callback:
@@ -66,21 +65,22 @@ def mainworkflow(expert_instruction, simple_instruction, workspace, update_callb
             print('Use original code for visual feedback')
             flush_output()
             visual_refine_agent = VisualRefineAgent('novice.png', config, '', simple_instruction)
-            visual_feedback = visual_refine_agent.run('gpt-4', 'novice', 'novice_final.png')
+            visual_feedback = visual_refine_agent.run(model, 'novice', 'novice_final.png')
             print('=========Visual Feedback=========')
-            # print(visual_feedback)
             flush_output()
             final_instruction = '' + '\n\n' + visual_feedback
             action_agent = PlotAgent(config, final_instruction)
-            novice_log, novice_code = action_agent.run_vis(args.model_type, 'novice_final.png')
+            novice_log, novice_code = action_agent.run_vis(model, 'novice_final.png')
             logging.info(novice_log)
 
             if update_callback:
-                update_callback(code=novice_code, visual_feedback=visual_feedback, figure=os.path.join(workspace, 'novice_final.png'))
+                update_callback(code=novice_code, visual_feedback=visual_feedback,
+                                figure=os.path.join(workspace, 'novice_final.png'))
 
         result = {
             'code': novice_code,
-            'visual_feedback': visual_feedback if args.visual_refine and os.path.exists(f'{workspace}/novice.png') else '',
+            'visual_feedback': visual_feedback if args.visual_refine and os.path.exists(
+                f'{workspace}/novice.png') else '',
             'figure_path': os.path.join(workspace, 'novice_final.png' if args.visual_refine else 'novice.png')
         }
 
@@ -100,10 +100,8 @@ def check_refined_code_executable(refined_code, model_type, query_type, workspac
 
 
 if __name__ == "__main__":
-
     workspace_base = args.workspace
     data_path = '/home/zhoupeng/project/LLM/agent/plotagent/benchmark/newPlotAgent/plot-agent/benchmark_data/'
-    # open the json file
     data = json.load(open(f'{data_path}/benchmark_instructions.json'))
 
     for item in tqdm(data):
@@ -112,17 +110,16 @@ if __name__ == "__main__":
         example_id = item['id']
         directory_path = f'{workspace_base}/example_{example_id}'
 
-        # Check if the directory already exists
         if not os.path.exists(directory_path):
-            # If it doesn't exist, create the directory
             os.mkdir(directory_path)
             print(f"Directory '{directory_path}' created successfully.")
             input_path = f'{data_path}/data/{example_id}'
             if os.path.exists(input_path):
-                #全部copy到f"Directory '{directory_path}'
                 os.system(f'cp -r {input_path}/* {directory_path}')
         else:
             print(f"Directory '{directory_path}' already exists.")
             continue
-        logging.basicConfig(level=logging.INFO, filename=f'{directory_path}/workflow.log', filemode='w', format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        mainworkflow(expert_instruction, novice_instruction, workspace=directory_path)
+
+        logging.basicConfig(level=logging.INFO, filename=f'{directory_path}/workflow.log', filemode='w',
+                            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        mainworkflow(expert_instruction, novice_instruction, workspace=directory_path, model=args.model_type)

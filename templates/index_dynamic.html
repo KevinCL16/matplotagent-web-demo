@@ -31,6 +31,16 @@
             padding: 10px;
             margin-bottom: 10px;
         }
+        .input-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        #customQuery {
+            flex-grow: 1;
+            padding: 10px;
+        }
         button {
             padding: 10px 20px;
             background-color: #007bff;
@@ -53,12 +63,25 @@
             max-width: 100%;
             height: auto;
         }
+        #modelSelect {
+            padding: 10px;
+        }
     </style>
 </head>
 <body>
     <h1>MatPlotAgent Benchmark Demo</h1>
-    <input type="number" id="benchmarkInput" min="1" max="100" placeholder="输入 ID (1-100)">
-    <button onclick="runBenchmark()">运行 Benchmark</button>
+    <div class="input-container">
+        <input type="number" id="benchmarkInput" min="1" max="100" placeholder="输入 ID (1-100)">
+        <input type="text" id="customQuery" placeholder="输入自定义查询">
+        <select id="modelSelect">
+            <option value="gpt-4">GPT-4</option>
+            <option value="gpt-4o">GPT-4o</option>
+            <option value="gpt-4-turbo">GPT-4 Turbo</option>
+            <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+            <option value="claude-3-5-sonnet-20240620">Claude 3.5 Sonnet</option>
+        </select>
+        <button onclick="runBenchmark()">运行 Benchmark</button>
+    </div>
 
     <div class="container">
         <div class="left-column">
@@ -89,7 +112,9 @@
 
         function runBenchmark() {
             const benchmarkId = document.getElementById('benchmarkInput').value;
-            socket.emit('run_benchmark', { id: benchmarkId });
+            const customQuery = document.getElementById('customQuery').value;
+            const selectedModel = document.getElementById('modelSelect').value;
+            socket.emit('run_benchmark', { id: benchmarkId, query: customQuery, model: selectedModel });
 
             // 清空之前的结果
             document.getElementById('instruction').textContent = '';
@@ -122,7 +147,7 @@
         });
 
         socket.on('plot_update', function(data) {
-    displayPlot(data.type === 'original' ? 'original_plot' : 'modified_plot', data.data);
+            displayPlot(data.type === 'original' ? 'original_plot' : 'modified_plot', data.data);
         });
 
         function updateContent(elementId, content, append) {
@@ -149,7 +174,7 @@
         });
 
         socket.on('error', function(data) {
-            document.getElementById('result').innerHTML += `<p>错误: ${data.error}</p>`;
+            document.getElementById('terminal_output').innerHTML += `<p style="color: red;">错误: ${data.error}</p>`;
         });
     </script>
 </body>
