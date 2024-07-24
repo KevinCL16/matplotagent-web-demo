@@ -4,42 +4,47 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MatPlotAgent Benchmark Demo</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <style>
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Roboto', sans-serif;
+            background-color: #f8f9fa;
             margin: 0;
             padding: 20px;
             box-sizing: border-box;
         }
+        h1 {
+            text-align: center;
+            margin-bottom: 40px;
+        }
         .container {
             display: flex;
+            flex-wrap: wrap;
             gap: 20px;
             margin-bottom: 20px;
         }
-        .left-column, .right-column {
+        .column {
             flex: 1;
-            overflow-y: auto;
-            max-height: calc(100vh - 200px);
+            min-width: 300px;
         }
         .left-column {
             border-right: 1px solid #ccc;
             padding-right: 20px;
         }
-        #benchmarkInput {
-            width: 100px;
-            padding: 10px;
-            margin-bottom: 10px;
-        }
         .input-container {
             display: flex;
-            align-items: center;
+            flex-wrap: wrap;
             gap: 10px;
             margin-bottom: 20px;
         }
-        #customQuery {
-            flex-grow: 1;
+        #benchmarkInput, #customQuery {
+            flex: 1;
             padding: 10px;
+            margin-bottom: 10px;
+        }
+        #customQuery {
+            height: auto;
         }
         button {
             padding: 10px 20px;
@@ -47,6 +52,10 @@
             color: white;
             border: none;
             cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #0056b3;
         }
         pre {
             background-color: #f4f4f4;
@@ -55,56 +64,70 @@
             overflow-x: auto;
             white-space: pre-wrap;
             word-wrap: break-word;
+            max-height: 100px;
+            overflow: hidden;
         }
-        #plot {
-            text-align: center;
+        pre.expanded {
+            max-height: none;
+        }
+        .expand-btn {
+            cursor: pointer;
+            color: #007bff;
+            text-decoration: underline;
         }
         #plot img {
             max-width: 100%;
             height: auto;
-        }
-        #modelSelect {
-            padding: 10px;
         }
     </style>
 </head>
 <body>
     <h1>MatPlotAgent Benchmark Demo</h1>
     <div class="input-container">
-        <input type="number" id="benchmarkInput" min="1" max="100" placeholder="输入 ID (1-100)">
-        <input type="text" id="customQuery" placeholder="输入自定义查询">
-        <select id="modelSelect">
+        <label for="benchmarkInput" class="sr-only">输入MatPlotBench测试样例ID (1-100)</label>
+        <input type="number" id="benchmarkInput" class="form-control" min="1" max="100" placeholder="输入 ID (1-100)">
+        <label for="customQuery" class="sr-only">输入自定义自然语言指令</label>
+        <textarea id="customQuery" class="form-control" placeholder="输入自定义查询"></textarea>
+        <select id="modelSelect" class="form-control">
             <option value="gpt-4">GPT-4</option>
             <option value="gpt-4o">GPT-4o</option>
             <option value="gpt-4-turbo">GPT-4 Turbo</option>
             <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
             <option value="claude-3-5-sonnet-20240620">Claude 3.5 Sonnet</option>
         </select>
-        <button onclick="runBenchmark()">运行 Benchmark</button>
+        <button onclick="runBenchmark()">运行 MatPlotAgent</button>
     </div>
 
     <div class="container">
-        <div class="left-column">
+        <div class="column left-column">
             <h2>终端输出:</h2>
-            <pre id="terminal_output"></pre>
+            <pre id="terminal_output" style="max-height: none;"></pre>
         </div>
-        <div class="right-column">
+        <div class="column">
             <h2>指令:</h2>
             <pre id="instruction"></pre>
+            <div class="expand-btn" onclick="toggleExpand('instruction')">Expand</div>
             <h2>扩展指令:</h2>
             <pre id="expanded_instruction"></pre>
+            <div class="expand-btn" onclick="toggleExpand('expanded_instruction')">Expand</div>
             <h2>生成的代码:</h2>
             <pre id="code"></pre>
+            <div class="expand-btn" onclick="toggleExpand('code')">Expand</div>
             <h2>视觉反馈:</h2>
             <pre id="visualFeedback"></pre>
+            <div class="expand-btn" onclick="toggleExpand('visualFeedback')">Expand</div>
         </div>
     </div>
 
-    <div id="plot">
-        <h2>原始图:</h2>
-        <div id="original_plot"></div>
-        <h2>修改后的图:</h2>
-        <div id="modified_plot"></div>
+    <div id="plot" class="container">
+        <div class="column">
+            <h2>Code Agent草图:</h2>
+            <div id="original_plot"></div>
+        </div>
+        <div class="column">
+            <h2>Visual feedback优化后输出:</h2>
+            <div id="modified_plot"></div>
+        </div>
     </div>
 
     <script>
@@ -163,6 +186,13 @@
         function displayPlot(elementId, plotData) {
             const plotDiv = document.getElementById(elementId);
             plotDiv.innerHTML = `<img src="data:image/png;base64,${plotData}" alt="生成的图">`;
+        }
+
+        function toggleExpand(elementId) {
+            const element = document.getElementById(elementId);
+            element.classList.toggle('expanded');
+            const expandBtn = element.nextElementSibling;
+            expandBtn.textContent = element.classList.contains('expanded') ? 'Collapse' : 'Expand';
         }
 
         socket.on('benchmark_complete', function(data) {

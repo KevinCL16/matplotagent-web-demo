@@ -80,7 +80,7 @@ def handle_benchmark(data):
                         shutil.copy2(s, d)
                 print(f"已将 {input_path} 的内容复制到 {workspace}")
 
-        print(f"执行 mainworkflow，使用模型: {model}")
+        print(f"执行 mainworkflow, 使用模型: {model}")
 
         def update_callback(expanded_instruction=None, code=None, visual_feedback=None, figure=None,
                             terminal_output=None):
