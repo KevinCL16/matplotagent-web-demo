@@ -1,10 +1,12 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" xmlns="http://www.w3.org/1999/html">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MatPlotAgent Benchmark Demo</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <style>
         body {
@@ -14,9 +16,15 @@
             padding: 20px;
             box-sizing: border-box;
         }
-        h1 {
-            text-align: center;
+        .title-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
             margin-bottom: 40px;
+        }
+        .title-container img {
+            max-height: 80px;
+            margin: 0 20px;
         }
         .container {
             display: flex;
@@ -38,13 +46,28 @@
             gap: 10px;
             margin-bottom: 20px;
         }
-        #benchmarkInput, #customQuery {
-            flex: 1;
-            padding: 10px;
+        .input-container .row {
+            display: flex;
+            width: 100%;
+            gap: 10px;
             margin-bottom: 10px;
         }
+        .input-container .form-control, .input-container button {
+            flex: 1;
+        }
+        #benchmarkInput {
+            width: 100px;
+        }
+        #modelSelect {
+            width: 150px;
+        }
         #customQuery {
+            flex: 1;
+            padding: 10px;
             height: auto;
+            min-height: 60px;
+            resize: vertical;
+            cursor: pointer;
         }
         button {
             padding: 10px 20px;
@@ -79,23 +102,38 @@
             max-width: 100%;
             height: auto;
         }
+        .clickable-image {
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+        .clickable-image:hover {
+            transform: scale(1.05);
+        }
     </style>
 </head>
 <body>
-    <h1>MatPlotAgent Benchmark Demo</h1>
+    <div class="title-container">
+        <img src="../static/logo.jpg" alt="Logo">
+        <h1>MatPlotAgent Demo</h1>
+        <img src="../static/thu.png" alt="THU Logo">
+    </div>
     <div class="input-container">
-        <label for="benchmarkInput" class="sr-only">输入MatPlotBench测试样例ID (1-100)</label>
-        <input type="number" id="benchmarkInput" class="form-control" min="1" max="100" placeholder="输入 ID (1-100)">
-        <label for="customQuery" class="sr-only">输入自定义自然语言指令</label>
-        <textarea id="customQuery" class="form-control" placeholder="输入自定义查询"></textarea>
-        <select id="modelSelect" class="form-control">
-            <option value="gpt-4">GPT-4</option>
-            <option value="gpt-4o">GPT-4o</option>
-            <option value="gpt-4-turbo">GPT-4 Turbo</option>
-            <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
-            <option value="claude-3-5-sonnet-20240620">Claude 3.5 Sonnet</option>
-        </select>
-        <button onclick="runBenchmark()">运行 MatPlotAgent</button>
+        <div class="row">
+            <label for="benchmarkInput" class="sr-only">MatPlotBench ID</label>
+            <input type="number" id="benchmarkInput" class="form-control" min="1" max="100" placeholder="输入MatPlotBench测试样例ID (1-100)">
+            <label for="customQuery" class="sr-only">customQuery</label>
+            <textarea id="customQuery" class="form-control" placeholder="输入自定义自然语言指令" readonly></textarea>
+        </div>
+        <div class="row">
+            <select id="modelSelect" class="form-control">
+                <option value="gpt-4">GPT-4</option>
+                <option value="gpt-4o">GPT-4o</option>
+                <option value="gpt-4-turbo">GPT-4 Turbo</option>
+                <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                <option value="claude-3-5-sonnet-20240620">Claude 3.5 Sonnet</option>
+            </select>
+            <button onclick="runBenchmark()">运行 MatPlotAgent</button>
+        </div>
     </div>
 
     <div class="container">
@@ -130,6 +168,44 @@
         </div>
     </div>
 
+    <!-- Modal for customQuery -->
+    <div class="modal fade" id="customQueryModal" tabindex="-1" role="dialog" aria-labelledby="customQueryModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="customQueryModalLabel">输入自定义自然语言指令</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <textarea id="customQueryInput" class="form-control" rows="10"></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">关闭</button>
+                    <button type="button" class="btn btn-primary" onclick="saveCustomQuery()">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for enlarged image -->
+    <div class="modal fade" id="imageModal" tabindex="-1" role="dialog" aria-labelledby="imageModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="imageModalLabel">放大图片</h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body">
+            <img src="" class="img-fluid" id="modalImage">
+          </div>
+        </div>
+      </div>
+    </div>
+
     <script>
         const socket = io();
 
@@ -148,6 +224,46 @@
             document.getElementById('original_plot').innerHTML = '';
             document.getElementById('modified_plot').innerHTML = '';
         }
+
+        function updateContent(elementId, content, append) {
+            const element = document.getElementById(elementId);
+            if (append) {
+                element.textContent += content + '\n';
+            } else {
+                element.textContent = content;
+            }
+            element.scrollTop = element.scrollHeight;
+        }
+
+        function displayPlot(elementId, plotData) {
+            const plotDiv = document.getElementById(elementId);
+            plotDiv.innerHTML = `<img src="data:image/png;base64,${plotData}" alt="生成的图" class="img-fluid clickable-image">`;
+
+            // 为新添加的图片绑定点击事件
+            plotDiv.querySelector('img').addEventListener('click', function() {
+                $('#modalImage').attr('src', this.src);
+                $('#imageModal').modal('show');
+            });
+        }
+
+        function toggleExpand(elementId) {
+            const element = document.getElementById(elementId);
+            element.classList.toggle('expanded');
+            const expandBtn = element.nextElementSibling;
+            expandBtn.textContent = element.classList.contains('expanded') ? 'Collapse' : 'Expand';
+        }
+
+        function saveCustomQuery() {
+            const customQueryValue = document.getElementById('customQueryInput').value;
+            document.getElementById('customQuery').value = customQueryValue;
+            $('#customQueryModal').modal('hide');
+        }
+
+        document.getElementById('customQuery').addEventListener('click', function() {
+            const currentQuery = document.getElementById('customQuery').value;
+            document.getElementById('customQueryInput').value = currentQuery;
+            $('#customQueryModal').modal('show');
+        });
 
         socket.on('instruction_update', function(data) {
             document.getElementById('instruction').textContent = data.instruction;
@@ -173,28 +289,6 @@
             displayPlot(data.type === 'original' ? 'original_plot' : 'modified_plot', data.data);
         });
 
-        function updateContent(elementId, content, append) {
-            const element = document.getElementById(elementId);
-            if (append) {
-                element.textContent += content + '\n';
-            } else {
-                element.textContent = content;
-            }
-            element.scrollTop = element.scrollHeight;
-        }
-
-        function displayPlot(elementId, plotData) {
-            const plotDiv = document.getElementById(elementId);
-            plotDiv.innerHTML = `<img src="data:image/png;base64,${plotData}" alt="生成的图">`;
-        }
-
-        function toggleExpand(elementId) {
-            const element = document.getElementById(elementId);
-            element.classList.toggle('expanded');
-            const expandBtn = element.nextElementSibling;
-            expandBtn.textContent = element.classList.contains('expanded') ? 'Collapse' : 'Expand';
-        }
-
         socket.on('benchmark_complete', function(data) {
             if (data.status === 'success') {
                 console.log('Benchmark 成功完成');
@@ -207,5 +301,10 @@
             document.getElementById('terminal_output').innerHTML += `<p style="color: red;">错误: ${data.error}</p>`;
         });
     </script>
+<br>
+<br>
+<br>
+<br>
+<br>
 </body>
 </html>
